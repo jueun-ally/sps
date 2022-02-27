@@ -326,7 +326,16 @@ class PlainBlock(nn.Module):
     # Store the result in self.net.                                            
     ############################################################################
     # Replace "pass" statement with your code
-    pass
+    stride = 2 if downsample  else 1
+    Cmiddle = int((Cin+ Cout)/2)
+    self.net = nn.Sequential(
+      nn.BatchNorm2d(Cin),
+      nn.ReLU(),
+      nn.Conv2d(Cin,Cmiddle, 3,padding = 1,stride = stride),
+      nn.BatchNorm2d(Cmiddle),
+      nn.ReLU(),
+      nn.Conv2d(Cmiddle,Cout, 3,padding = 1)
+    )
     ############################################################################
     #                                 END OF YOUR CODE                         #
     ############################################################################
@@ -350,7 +359,22 @@ class ResidualBlock(nn.Module):
     # Store the main block in self.block and the shortcut in self.shortcut.    #
     ############################################################################
     # Replace "pass" statement with your code
-    pass
+    stride = 2 if downsample  else 1
+    Cmiddle = int((Cin+ Cout)/2)
+    self.block = nn.Sequential(
+      nn.BatchNorm2d(Cin),
+      nn.ReLU(),
+      nn.Conv2d(Cin,Cmiddle, 3,padding = 1,stride = stride),
+      nn.BatchNorm2d(Cmiddle),
+      nn.ReLU(),
+      nn.Conv2d(Cmiddle,Cout, 3,padding = 1)
+    )
+    if (Cin==Cout) and not downsample:
+      self.shortcut = nn.Identity()
+    elif (Cin != Cout) and not downsample:
+      self.shortcut = nn.Conv2d(Cin,Cout, 1,stride = 1)
+    else:
+      self.shortcut = nn.Conv2d(Cin,Cout, 1,stride = 2)
     ############################################################################
     #                                 END OF YOUR CODE                         #
     ############################################################################
@@ -370,7 +394,11 @@ class ResNet(nn.Module):
     # Store the model in self.cnn.                                             #
     ############################################################################
     # Replace "pass" statement with your code
-    pass
+    blocks = [ResNetStem()]
+    for arg in  stage_args:
+      blocks.append( ResNetStage(*arg))
+    blocks.append(nn.AvgPool2d(8))
+    self.cnn = nn.Sequential(*blocks)
     ############################################################################
     #                                 END OF YOUR CODE                         #
     ############################################################################
@@ -383,7 +411,7 @@ class ResNet(nn.Module):
     # Store the output in `scores`.                                            #
     ############################################################################
     # Replace "pass" statement with your code
-    pass
+    scores = self.fc(flatten(self.cnn(x)))
     ############################################################################
     #                                 END OF YOUR CODE                         #
     ############################################################################
@@ -405,7 +433,26 @@ class ResidualBottleneckBlock(nn.Module):
     # Store the main block in self.block and the shortcut in self.shortcut.    #
     ############################################################################
     # Replace "pass" statement with your code
-    pass
+    stride = 2 if downsample  else 1
+    Cmiddle = int((Cin+ Cout)/2)
+    C_4 = Cout // 4
+    self.block = nn.Sequential(
+      nn.BatchNorm2d(Cin),
+      nn.ReLU(),
+      nn.Conv2d(Cin,C_4, 1,stride = stride),
+      nn.BatchNorm2d(C_4),
+      nn.ReLU(),
+      nn.Conv2d(C_4,C_4, 3,padding = 1),
+      nn.BatchNorm2d(C_4),
+      nn.ReLU(),
+      nn.Conv2d(C_4,Cout, 1)
+    )
+    if (Cin==Cout) and not downsample:
+      self.shortcut = nn.Identity()
+    elif (Cin != Cout) and not downsample:
+      self.shortcut = nn.Conv2d(Cin,Cout, 1,stride = 1)
+    else:
+      self.shortcut = nn.Conv2d(Cin,Cout, 1,stride = 2)
     ############################################################################
     #                                 END OF YOUR CODE                         #
     ############################################################################
